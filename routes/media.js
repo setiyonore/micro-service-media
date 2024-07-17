@@ -1,9 +1,36 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
+const isBase64 = require('is-base64');
+const base64Img = require('base64-img');
+const { Media } = require('../models');
 
-/* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
+router.post('/', (req, res) => {
+  const image = req.body.image;
+  if (!isBase64(image, { mimeRequired: true })) {
+    return res.status(400).json({ status: 'error', message: 'invalid base64' });
+  }
+  base64Img.img(image, './public/images', Date.now(), async (err, filepath) => {
+    if (err) {
+      return res.status(400).json({ status: 'error', message: err.message });
+    }
+    const filename = filepath.split('/').pop();
+
+    try {
+      const media = await Media.create({ image: `image/${filename}` });
+      return res.json({
+        status: 'success',
+        data: {
+          id: media.id,
+          image: `${req.protocol}://${req.get('host')}/images/${filename}`
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+
+
+  })
 });
 
 module.exports = router;
