@@ -3,7 +3,19 @@ const router = express.Router();
 const isBase64 = require('is-base64');
 const base64Img = require('base64-img');
 const { Media } = require('../models');
-
+router.get('/', async (req, res) => {
+  const media = await Media.findAll({
+    attributes: ['id', 'image'],
+  });
+  const mappedMedia = media.map((m) => {
+    m.image = `${req.protocol}://${req.get('host')}/${m.image}`
+    return m;
+  });
+  return res.json({
+    status: 'success',
+    data: mappedMedia,
+  });
+});
 router.post('/', (req, res) => {
   const image = req.body.image;
   if (!isBase64(image, { mimeRequired: true })) {
@@ -16,7 +28,7 @@ router.post('/', (req, res) => {
     const filename = filepath.split('/').pop();
 
     try {
-      const media = await Media.create({ image: `image/${filename}` });
+      const media = await Media.create({ image: `images/${filename}` });
       return res.json({
         status: 'success',
         data: {
